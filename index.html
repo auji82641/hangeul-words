@@ -264,15 +264,20 @@ function checkWord(w){
 
 /* 음절 하나 → 자석 조각 (mm) */
 function consList(c, opt){ return (opt.splitDouble && DOUBLE[c]) ? [...DOUBLE[c]] : [c]; }
-// 조각 하나의 실제 크기(mm): 같은 종류는 같은 글자 크기, 크기는 글자 모양 그대로
-function glyphScale(ch, d){
-  if (VERT.has(ch)) { const m = measure(null, "ㅣ"); return d.vlen / (m.a + m.d || 1); }
-  if (HORI.has(ch)) { const m = measure(null, "ㅡ"); return d.hlen / (m.l + m.r || 1); }
-  const m = measure(null, "ㅇ"); return d.cons / (m.a + m.d || 1);
-}
+// 조각 하나의 실제 크기(mm). 글꼴과 상관없이 자석 크기표로 정해요.
+// 자로 잰 것: ㅇ 27×27 · ㅈ 36×27 · ㅣ 길이 52 · ㅏ 22×52 · ㅡ 55×10 · ㅗ 55×15
+// 나머지는 같은 비율로 어림한 값이에요 (가로÷세로).
+const CONS_RATIO = { "ㄱ":1.0,"ㄴ":1.0,"ㄷ":1.05,"ㄹ":1.05,"ㅁ":1.0,"ㅂ":1.0,"ㅅ":1.25,"ㅇ":1.0,"ㅈ":1.33,"ㅊ":1.33,"ㅋ":1.0,"ㅌ":1.05,"ㅍ":1.15,"ㅎ":1.1,
+  "ㄲ":1.8,"ㄸ":1.85,"ㅃ":1.8,"ㅆ":2.0,"ㅉ":2.2 };
+const CONS_TALL = { "ㅊ":1.2, "ㅎ":1.2 };                       // 위에 점이 있어 조금 더 높아요
+const VERT_RATIO = { "ㅣ":0.2,"ㅏ":0.42,"ㅓ":0.42,"ㅑ":0.45,"ㅕ":0.45,"ㅐ":0.6,"ㅔ":0.6,"ㅒ":0.65,"ㅖ":0.65 };   // 가로÷길이
+const HORI_RATIO = { "ㅡ":0.18,"ㅗ":0.28,"ㅜ":0.28,"ㅛ":0.3,"ㅠ":0.3 };                                      // 세로÷길이
 function piece(ch, kind, d){
-  const m = measure(null, ch), S = glyphScale(ch, d);
-  return { ch, kind, S, w:(m.l + m.r) * S, h:(m.a + m.d) * S, x:0, y:0 };
+  let w, h;
+  if (VERT.has(ch)){ h = d.vlen; w = d.vlen * (VERT_RATIO[ch] || 0.42); }
+  else if (HORI.has(ch)){ w = d.hlen; h = d.hlen * (HORI_RATIO[ch] || 0.28); }
+  else { h = d.cons * (CONS_TALL[ch] || 1); w = d.cons * (CONS_RATIO[ch] || 1.05); }
+  return { ch, kind, w, h, x:0, y:0 };
 }
 function rowOf(list, d){
   let x = 0, h = 0;
@@ -345,10 +350,13 @@ function drawPiece(ctx, k, p, ox, oy, st){
     ctx.save(); ctx.setLineDash([1.2*k,1*k]); ctx.lineWidth=.3*k; ctx.strokeStyle="#B9C2BE";
     rr(ctx, (X-o)*k, (Y-o)*k, (p.w+2*o)*k, (p.h+2*o)*k, 2*k); ctx.stroke(); ctx.restore();
   }
-  const m = measure(null, p.ch);
-  ctx.save(); ctx.font = `${GF.weight} ${100*p.S*k}px ${GF.css}`; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  // 글자를 자석 크기 칸에 꽉 맞춰 그려요 (가로·세로 따로 늘려요)
+  const m = measure(null, p.ch), bw = m.l + m.r, bh = m.a + m.d; if (!bw || !bh) return;
+  const sx = p.w / bw, sy = p.h / bh;
+  ctx.save(); ctx.translate(X*k, Y*k); ctx.scale(sx*k, sy*k);
+  ctx.font = `${GF.weight} 100px ${GF.css}`; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
   ctx.fillStyle = p.kind === "c" ? st.colors.c : st.colors.v;
-  ctx.fillText(p.ch, (X + m.l*p.S)*k, (Y + m.a*p.S)*k); ctx.restore();
+  ctx.fillText(p.ch, m.l, m.a); ctx.restore();
 }
 function text(ctx, k, str, x, y, size, color, weight, align){
   ctx.save(); ctx.font = `${weight||400} ${size*k}px ${UI_FONT}`; ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.textAlign = align || "left";
