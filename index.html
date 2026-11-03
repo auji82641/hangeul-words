@@ -1,0 +1,643 @@
+<title>자석한글 낱말 상자</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&family=Gowun+Batang:wght@400;700&display=swap">
+<style>
+/* Layout: 위 낱말 상자(장소 칸 + 받침 구분) → 아래 고른 낱말 A4 활동지. 교구장 칸 + 펠트 초록 */
+:root{
+  --bg:#EFF2EE; --surface:#FFFFFF; --ink:#1C2522; --muted:#5A6762; --line:#D5DCD7;
+  --accent:#2D6A4D; --accent-ink:#FFFFFF; --wood:#A8773F; --wood-soft:#F1E4D1; --warn:#B3412E; --soft:#E3EBE6;
+  --cons:#D2412F; --vow:#2A5DB0;
+  --font-display:"Gowun Batang", "Nanum Myeongjo", serif;
+  --font-body:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-glyph:"Gowun Batang", "Nanum Myeongjo", serif; --glyph-weight:700;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121817; --surface:#1B2320; --ink:#E6ECE9; --muted:#9AA7A2; --line:#2E3935;
+  --accent:#72B794; --accent-ink:#0E1513; --wood:#D2A877; --wood-soft:#2E2820; --warn:#E8836F; --soft:#24302C;
+  --cons:#F08F7D; --vow:#86AAEE; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121817; --surface:#1B2320; --ink:#E6ECE9; --muted:#9AA7A2; --line:#2E3935;
+  --accent:#72B794; --accent-ink:#0E1513; --wood:#D2A877; --wood-soft:#2E2820; --warn:#E8836F; --soft:#24302C;
+  --cons:#F08F7D; --vow:#86AAEE; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 56px;display:grid;gap:24px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{display:grid;gap:8px}
+.kicker{font-size:12px;letter-spacing:.06em;color:var(--wood);font-weight:600}
+h1{font-family:var(--font-display);font-weight:700;font-size:clamp(30px,5vw,44px);line-height:1.2;margin:0;text-wrap:balance}
+h2{font-family:var(--font-display);font-weight:700;font-size:22px;margin:0}
+h3{font-size:13px;margin:0;color:var(--muted);font-weight:600}
+.lede{color:var(--muted);margin:0;max-width:62ch}
+.lede b{color:var(--ink)}
+
+.box{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;gap:16px;min-width:0}
+.box-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.box-head p{margin:0;color:var(--muted);font-size:13px}
+
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border-radius:999px}
+.tabs button span{font-weight:400;opacity:.7;margin-left:4px;font-variant-numeric:tabular-nums}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.shelf{display:grid;gap:12px;background:var(--wood-soft);padding:12px 14px;border-radius:12px}
+.group{display:grid;gap:8px}
+.group-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--wood)}
+.group-title small{font-weight:400;color:var(--muted)}
+.grid{display:flex;flex-wrap:wrap;gap:6px}
+.word{font-family:var(--font-glyph);font-weight:var(--glyph-weight);font-size:15px;
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px 11px;cursor:pointer;color:var(--ink);line-height:1.4}
+@media (max-width:600px){.word{font-size:14px;padding:2px 10px}.grid{gap:5px}}
+.word:hover{border-color:var(--accent)}
+.word[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.word:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.c{color:var(--cons)} .v{color:var(--vow)}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.add{display:flex;gap:8px;flex-wrap:wrap}
+.add input{flex:1 1 180px;min-width:0}
+input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-size:14px;font-weight:600;border-radius:10px;padding:9px 14px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.ghost{background:transparent}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.5;cursor:wait}
+.msg{font-size:13px;color:var(--warn);margin:0}
+.msg.ok{color:var(--accent)}
+.msg:empty{display:none}
+.note{font-size:12.5px;color:var(--muted);margin:0}
+
+.work{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.work{grid-template-columns:minmax(0,1fr)}}
+.side{display:grid;gap:16px;position:sticky;top:calc(env(safe-area-inset-top, 0px) + 16px)}
+@media (max-width:860px){.side{position:static}}
+.picked{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 12px;font-family:var(--font-glyph);font-weight:var(--glyph-weight);font-size:16px;background:var(--bg)}
+.pill.has{border-color:var(--wood)}
+.pill button{border:0;background:transparent;padding:2px 8px;font-size:15px;color:var(--muted);line-height:1}
+.opt{display:grid;gap:8px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;background:var(--bg)}
+.seg input:checked + label{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.seg input:focus-visible + label{outline:2px solid var(--accent);outline-offset:2px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.check input{accent-color:var(--accent);width:16px;height:16px}
+.save{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.save button{padding:11px 6px}
+
+.sheets-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.sheets-head span{font-size:12px;color:var(--muted)}
+.pages{display:grid;gap:14px}
+.sheet{width:100%;background:#fff;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.08),0 8px 24px rgba(20,40,30,.10);display:block}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:14px;background:var(--bg)}
+.chip b{font-family:var(--font-glyph);font-weight:var(--glyph-weight);font-size:17px;margin-right:3px}
+.dims{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.dims label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
+.unit{position:relative}
+.unit input{padding-right:36px;font-variant-numeric:tabular-nums}
+.unit::after{content:"mm";position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600;font-size:14px}
+
+.shop{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.shop p{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:56ch}
+.shop a{text-decoration:none;background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:10px;padding:12px 18px;white-space:nowrap}
+
+#print-root{display:none}
+@media print{
+  body *{visibility:hidden}
+  #print-root,#print-root *{visibility:visible}
+  #print-root{display:block;position:absolute;left:0;top:0}
+  #print-root img{display:block;width:210mm;height:297mm;break-after:page}
+  :root{padding:0}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">다원몬테소리 원목 자석한글과 함께</div>
+    <h1>자석한글 낱말 상자</h1>
+    <p class="lede">집, 마트, 동물원에서 매일 만나는 낱말 200여 개를 <b>받침 없는 낱말</b>과 <b>받침 있는 낱말</b>로 나눠 담았어요. 받침 없는 낱말부터 시작해 보세요. 고른 낱말은 자석을 그대로 올려놓을 수 있는 A4 활동지가 돼요.</p>
+  </header>
+
+  <section class="box" aria-labelledby="shelf-title">
+    <div class="box-head">
+      <h2 id="shelf-title">어디서 봤을까?</h2>
+      <p id="pickCount">0개 고름</p>
+    </div>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="seg" role="radiogroup" aria-label="받침으로 거르기">
+      <input type="radio" name="batchim" id="bf-all" value="all" checked><label for="bf-all">모두</label>
+      <input type="radio" name="batchim" id="bf-no" value="no"><label for="bf-no">받침 없는 낱말</label>
+      <input type="radio" name="batchim" id="bf-yes" value="yes"><label for="bf-yes">받침 있는 낱말</label>
+    </div>
+    <div class="shelf" id="shelf"></div>
+    <div class="row">
+      <button type="button" class="ghost" id="btn-all">이 칸 모두 담기</button>
+      <button type="button" class="ghost" id="btn-none">모두 빼기</button>
+    </div>
+    <div class="add">
+      <input type="text" id="custom" maxlength="4" enterkeyhint="done" placeholder="낱말 직접 넣기 · 4글자까지 (예: 아이 이름)" aria-label="낱말 직접 넣기, 4글자까지">
+      <button type="button" id="btn-add">담기</button>
+    </div>
+    <p class="msg" id="addMsg" aria-live="polite"></p>
+  </section>
+
+  <div class="work">
+    <aside class="side">
+      <section class="box">
+        <h2>고른 낱말</h2>
+        <div class="picked" id="picked"></div>
+        <div class="opt">
+          <h3>글자 색</h3>
+          <div class="seg">
+            <input type="radio" name="color" id="c-cr" value="cr" checked><label for="c-cr"><i class="dot" style="background:#D2412F"></i><i class="dot" style="background:#2A5DB0"></i>자음 빨강 · 모음 파랑</label>
+            <input type="radio" name="color" id="c-tr" value="trace"><label for="c-tr"><i class="dot" style="background:#BFC6C3"></i>연한 회색 (올려놓기 연습)</label>
+          </div>
+        </div>
+        <div class="opt">
+          <label class="check"><input type="checkbox" id="draw" checked> 그림 그리는 칸 넣기</label>
+          <label class="check"><input type="checkbox" id="outline" checked> 자석 자리 점선</label>
+        </div>
+        <div class="save">
+          <button type="button" id="btn-pdf" class="primary">PDF로 받기</button>
+          <button type="button" id="btn-print">인쇄</button>
+          <button type="button" id="btn-png">이미지</button>
+        </div>
+        <p class="note">프린터 배율을 100%로 두면 종이 위 글자가 자석과 같은 크기로 나와요. 아래쪽 5cm 선을 자로 재서 확인할 수 있어요.</p>
+        <p class="msg" id="msg" aria-live="polite"></p>
+      </section>
+
+      <section class="box">
+        <h2>준비할 자석</h2>
+        <p class="note">활동지 한 장을 한꺼번에 놓을 때 가장 많이 필요한 개수예요.</p>
+        <div class="chips" id="counts"></div>
+        <details>
+          <summary>자석 치수 맞추기</summary>
+          <p class="note" style="margin-top:8px">자석 세 개만 자로 재면 돼요. 나머지 글자는 같은 비율로 맞춰져요. 이 기기에 저장돼요.</p>
+          <div class="dims">
+            <label>ㅇ 자석 높이<span class="unit"><input type="number" id="d-cons" step="0.5" min="5" max="120"></span></label>
+            <label>ㅣ 자석 길이<span class="unit"><input type="number" id="d-vlen" step="0.5" min="5" max="200"></span></label>
+            <label>ㅡ 자석 길이<span class="unit"><input type="number" id="d-hlen" step="0.5" min="5" max="200"></span></label>
+            <label>자석 사이 틈<span class="unit"><input type="number" id="d-gap" step="0.5" min="0" max="20"></span></label>
+            <label>글자 사이 간격<span class="unit"><input type="number" id="d-sp" step="0.5" min="0" max="40"></span></label>
+          </div>
+          <button type="button" class="ghost" id="btn-reset" style="margin-top:10px">처음 값으로</button>
+        </details>
+      </section>
+    </aside>
+
+    <section aria-label="활동지 미리보기" style="display:grid;gap:12px;min-width:0">
+      <div class="sheets-head"><h2>활동지</h2><span id="pageInfo">A4 세로</span></div>
+      <div class="pages" id="pages"></div>
+    </section>
+  </div>
+
+  <section class="box shop">
+    <div>
+      <h2>다원몬테소리 원목 자석한글</h2>
+      <p>인천에서 직접 만드는 원목 이동글자예요. 자음과 모음을 하나씩 옮겨 활동지 위에서 낱말을 완성해 보세요.</p>
+    </div>
+    <a id="productLink" href="#" target="_blank" rel="noopener">자석한글 보러 가기</a>
+  </section>
+</div>
+
+<div id="print-root"></div>
+
+<script>
+/* ===== 판매자가 바꿀 곳 ===== */
+const CONFIG = {
+  productUrl: "https://smartstore.naver.com/montessori/products/5389011961",
+  // 실제 자석을 재서 바꿔 주세요 (mm). 지금 값은 임시값이에요.
+  // 자석 실측값 (mm): ㅇ 높이, ㅣ 길이, ㅡ 길이 (자로 잰 값: ㅇ 27 · ㅣ 52 · ㅡ 55 · ㅗ 가로 55 · ㅈ 36×27)
+  dims: { cons:27, vlen:52, hlen:55, gap:3, sp:8 },
+};
+// 장소별 낱말. 받침 있고 없고는 자동으로 나눠져요. (배는 먹을거리·탈것 양쪽에 있어요)
+const WORDS = {
+  "먹을거리": "파 가지 포도 토마토 딸기 상추 오이 배 사과 배추 고추 용과 마늘 애호박 당근 무 멜론 귤 바나나 호박 수박 양파 레몬 석류 아보카도 복숭아 감 키위 양배추 자두 망고 오렌지 체리 옥수수 자몽 시금치 고구마 감자 콩 파프리카 블루베리 살구 버섯 콩나물 브로콜리 파인애플 참외 무화과 우유 피자 두부 주스 치즈 카레",
+  "집 안": "냉장고 식탁 화장실 서랍장 침대 책상 의자 책장 옷장 컴퓨터 창문 인형 변기 이불 소파 세탁기 싱크대 정수기 세면대 시계 바지 치마 모자 휴지 비누 베개 가구 수저 지우개",
+  "동물": "도마뱀 코알라 얼룩말 캥거루 코뿔소 고릴라 너구리 여우 닭 타조 염소 표범 사자 기린 호랑이 강아지 악어 소 하마 사슴 원숭이 고양이 침팬지 오리 뱀 고슴도치 햄스터 나무늘보 쥐 펭귄 달팽이 거미 거북이 다람쥐 지렁이 병아리 돼지 말 코끼리 양 치타 판다 개 곰 개구리 토끼 낙타 늑대 나비 새 개미",
+  "바다": "고래 돌고래 가오리 해파리 새우 상어 물고기 해마 오징어 복어 조개 물범 문어 게 물개 수달 바다 파도",
+  "가족과 마음": "사랑해 감사해 소중해 가족 엄마 아빠 언니 누나 동생 나 오빠 형 할머니 할아버지 아기 이모 고모 우리 선생님 친구",
+  "우리 몸": "머리 이마 눈 코 입 귀 손 발 팔 다리 허리 배꼽",
+  "탈것": "택시 소방차 구급차 버스 배 경찰차 기차 트럭 포크레인 청소차 트랙터 레미콘 굴착기 지게차 불도저 지하철",
+  "놀이": "요가 가수 소리 레고 그네 시소",
+  "밖에서": "카페 마트 우표 도로 지도 가게 나무 어린이집 유치원 가방"
+};
+const DEFAULT_PICK = ["바나나","포도","우유","딸기"];
+/* ========================== */
+
+const CHO  = [..."ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"];
+const JUNG = [..."ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"];
+const JONG = ["", ..."ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"];
+const VERT = new Set([..."ㅏㅐㅑㅒㅓㅔㅕㅖㅣ"]);
+const HORI = new Set([..."ㅗㅛㅜㅠㅡ"]);
+const MIX  = {"ㅘ":["ㅗ","ㅏ"],"ㅙ":["ㅗ","ㅐ"],"ㅚ":["ㅗ","ㅣ"],"ㅝ":["ㅜ","ㅓ"],"ㅞ":["ㅜ","ㅔ"],"ㅟ":["ㅜ","ㅣ"],"ㅢ":["ㅡ","ㅣ"]};
+const CLUSTER = {"ㄳ":"ㄱㅅ","ㄵ":"ㄴㅈ","ㄶ":"ㄴㅎ","ㄺ":"ㄹㄱ","ㄻ":"ㄹㅁ","ㄼ":"ㄹㅂ","ㄽ":"ㄹㅅ","ㄾ":"ㄹㅌ","ㄿ":"ㄹㅍ","ㅀ":"ㄹㅎ","ㅄ":"ㅂㅅ"};
+const DOUBLE = {"ㄲ":"ㄱㄱ","ㄸ":"ㄷㄷ","ㅃ":"ㅂㅂ","ㅆ":"ㅅㅅ","ㅉ":"ㅈㅈ"};
+const COLORS = { cr:{c:"#D2412F", v:"#2A5DB0"}, trace:{c:"#BFC6C3", v:"#BFC6C3"} };
+// 글씨체: 교과서 바탕(고운바탕 굵게) 하나만 써요
+const GF = { css:'"Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif', weight:700 };
+const PG = { w:210, h:297 };
+const HALF = { w:186, h:127 };     // 반쪽 카드 영역
+const WIDE = { w:262, h:182 };     // 한 장을 가로로 쓸 때
+const UI_FONT = '"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif';
+
+/* 한글 */
+function split(ch){ const i = ch.charCodeAt(0) - 0xAC00; return { cho:CHO[Math.floor(i/588)], jung:JUNG[Math.floor((i%588)/28)], jong:JONG[i%28] }; }
+function hasBatchim(w){ return [...w].some(ch => (ch.charCodeAt(0) - 0xAC00) % 28 !== 0); }
+function josa(w, withB, without){ const c = w.charCodeAt(w.length-1) - 0xAC00; return w + ((c >= 0 && c <= 11171 && c % 28) ? withB : without); }
+const MAX_LEN = 4;   // 자석 크기 그대로 A4에 들어가는 글자 수
+function checkWord(w){
+  if (!w) return "낱말을 넣어 주세요.";
+  if ([...w].length > MAX_LEN) return `${MAX_LEN}글자까지만 넣을 수 있어요. 더 길면 자석 크기로는 A4 종이에서 잘려요.`;
+  for (const ch of w){ const i = ch.charCodeAt(0) - 0xAC00; if (i < 0 || i > 11171) return `‘${ch}’는 한글 글자가 아니에요. 한글로만 넣어 주세요.`; }
+  return "";
+}
+
+/* 음절 하나 → 자석 조각 (mm) */
+function consList(c, opt){ return (opt.splitDouble && DOUBLE[c]) ? [...DOUBLE[c]] : [c]; }
+// 조각 하나의 실제 크기(mm): 같은 종류는 같은 글자 크기, 크기는 글자 모양 그대로
+function glyphScale(ch, d){
+  if (VERT.has(ch)) { const m = measure(null, "ㅣ"); return d.vlen / (m.a + m.d || 1); }
+  if (HORI.has(ch)) { const m = measure(null, "ㅡ"); return d.hlen / (m.l + m.r || 1); }
+  const m = measure(null, "ㅇ"); return d.cons / (m.a + m.d || 1);
+}
+function piece(ch, kind, d){
+  const m = measure(null, ch), S = glyphScale(ch, d);
+  return { ch, kind, S, w:(m.l + m.r) * S, h:(m.a + m.d) * S, x:0, y:0 };
+}
+function rowOf(list, d){
+  let x = 0, h = 0;
+  const ps = list.map((c,i) => { const p = piece(c, "c", d); if (i) x += d.gap; p.x = x; x += p.w; h = Math.max(h, p.h); return p; });
+  ps.forEach(p => p.y = (h - p.h)/2);
+  return { ps, w:x, h };
+}
+const shiftAll = (ps, dx, dy) => ps.forEach(p => { p.x += dx; p.y += dy; });
+function layoutSyllable(ch, d, opt){
+  const s = split(ch), v = s.jung;
+  const ini = rowOf(consList(s.cho, opt), d);
+  let top = [], topW, topH;
+  if (VERT.has(v)){
+    const V = piece(v, "v", d);
+    // 실제 '자' 배치: 자음은 모음 옆 6mm쯤, 모음 가운데보다 살짝 아래
+    const side = Math.max(d.gap, 6);
+    topH = Math.max(ini.h, V.h); topW = ini.w + side + V.w;
+    V.y = (topH - V.h)/2; V.x = ini.w + side;
+    const cy = Math.min(topH - ini.h, Math.max(0, V.y + V.h*0.54 - ini.h/2));
+    shiftAll(ini.ps, 0, cy);
+    top = [...ini.ps, V];
+  } else if (HORI.has(v)){
+    const H = piece(v, "v", d);
+    topW = Math.max(ini.w, H.w); topH = ini.h + d.gap + H.h;
+    shiftAll(ini.ps, (topW - ini.w)/2, 0); H.x = (topW - H.w)/2; H.y = ini.h + d.gap;
+    top = [...ini.ps, H];
+  } else {
+    const [hv, vv] = MIX[v], H = piece(hv, "v", d), V = piece(vv, "v", d);
+    const colW = Math.max(ini.w, H.w), colH = ini.h + d.gap + H.h;
+    topH = Math.max(colH, V.h); topW = colW + d.gap + V.w;
+    const cy = (topH - colH)/2;
+    shiftAll(ini.ps, (colW - ini.w)/2, cy); H.x = (colW - H.w)/2; H.y = cy + ini.h + d.gap;
+    V.x = colW + d.gap; V.y = (topH - V.h)/2;
+    top = [...ini.ps, H, V];
+  }
+  if (!s.jong) return { w:topW, h:topH, pieces:top };
+  const fin = rowOf((CLUSTER[s.jong] ? [...CLUSTER[s.jong]] : [s.jong]).flatMap(c => consList(c, opt)), d);
+  const w = Math.max(topW, fin.w);
+  shiftAll(top, (w - topW)/2, 0); shiftAll(fin.ps, (w - fin.w)/2, topH + d.gap);
+  return { w, h:topH + d.gap + fin.h, pieces:[...top, ...fin.ps] };
+}
+function layoutWord(word, d, opt){
+  const blocks = [...word].map(ch => layoutSyllable(ch, d, opt));
+  const h = Math.max(0, ...blocks.map(b => b.h)); let x = 0; const items = [];
+  blocks.forEach((b, i) => {
+    if (i) x += d.sp;
+    b.pieces.forEach(p => items.push({ ...p, x:p.x + x, y:p.y + (h - b.h)/2 }));
+    x += b.w;
+  });
+  return { w:x, h, items };
+}
+
+/* 그리기 */
+const mcache = new Map();
+const MCTX = document.createElement("canvas").getContext("2d");
+function measure(_ctx, ch){
+  if (mcache.has(ch)) return mcache.get(ch);
+  MCTX.font = `${GF.weight} 100px ${GF.css}`; const m = MCTX.measureText(ch);
+  const r = { l:m.actualBoundingBoxLeft, r:m.actualBoundingBoxRight, a:m.actualBoundingBoxAscent, d:m.actualBoundingBoxDescent };
+  if (r.l + r.r > 0 && r.a + r.d > 0) mcache.set(ch, r);
+  return r;
+}
+function rr(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function drawPiece(ctx, k, p, ox, oy, st){
+  const X = ox + p.x, Y = oy + p.y;
+  if (st.outline){
+    const o = 1.5;
+    ctx.save(); ctx.setLineDash([1.2*k,1*k]); ctx.lineWidth=.3*k; ctx.strokeStyle="#B9C2BE";
+    rr(ctx, (X-o)*k, (Y-o)*k, (p.w+2*o)*k, (p.h+2*o)*k, 2*k); ctx.stroke(); ctx.restore();
+  }
+  const m = measure(null, p.ch);
+  ctx.save(); ctx.font = `${GF.weight} ${100*p.S*k}px ${GF.css}`; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
+  ctx.fillStyle = p.kind === "c" ? st.colors.c : st.colors.v;
+  ctx.fillText(p.ch, (X + m.l*p.S)*k, (Y + m.a*p.S)*k); ctx.restore();
+}
+function text(ctx, k, str, x, y, size, color, weight, align){
+  ctx.save(); ctx.font = `${weight||400} ${size*k}px ${UI_FONT}`; ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.textAlign = align || "left";
+  ctx.fillText(str, x*k, y*k); ctx.restore();
+}
+// 카드 한 칸: 위는 자석 자리, 남는 자리에 그림 칸
+function drawCard(ctx, k, item, area, st){
+  const {x,y,w,h} = area, L = item.layout;
+  text(ctx, k, `${item.place} · ${item.batchim ? "받침 있는 낱말" : "받침 없는 낱말"}`, x+2, y+4, 3.4, "#7A8580", 600);
+  const avail = h - 12;
+  const boxH = st.draw ? Math.min(52, avail - L.h - 10) : 0;
+  const useBox = boxH >= 24;
+  const wordY = y + 12 + Math.max(0, (avail - L.h - (useBox ? boxH + 10 : 0))/2);
+  if (useBox){
+    const boxW = Math.min(110, w*.5), bx = x + (w-boxW)/2, by = y + h - boxH;
+    ctx.save(); ctx.strokeStyle = "#C9D0CC"; ctx.lineWidth = .35*k; rr(ctx, bx*k, by*k, boxW*k, boxH*k, 3*k); ctx.stroke(); ctx.restore();
+    text(ctx, k, "그림을 그려 보세요", bx + 4, by + 4.5, 3, "#A3ADA8");
+  }
+  L.items.forEach(p => drawPiece(ctx, k, p, x + (w - L.w)/2, wordY, st));
+  return L.w > w + .01;
+}
+function drawFooter(ctx, k){
+  const ry = PG.h - 7.5, x0 = 12;
+  ctx.save(); ctx.strokeStyle = "#7A8580"; ctx.lineWidth = .35*k; ctx.beginPath();
+  ctx.moveTo(x0*k, ry*k); ctx.lineTo((x0+50)*k, ry*k);
+  for (let i=0;i<=5;i++){ const t = i%5 ? 1.1 : 2.2; ctx.moveTo((x0+i*10)*k,(ry-t)*k); ctx.lineTo((x0+i*10)*k,ry*k); }
+  ctx.stroke(); ctx.restore();
+  text(ctx, k, "5cm — 자로 재서 같으면 자석 크기 그대로예요", x0+53, ry-.8, 2.6, "#7A8580");
+  text(ctx, k, "자석한글 낱말 상자 · 다원몬테소리", PG.w-12, ry-.8, 2.6, "#7A8580", 400, "right");
+}
+function drawPage(canvas, k, page, st){
+  canvas.width = Math.round(PG.w*k); canvas.height = Math.round(PG.h*k);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  let over = false;
+  if (page.wide){
+    // 긴 낱말: 종이를 옆으로 돌려 한 장에 하나
+    ctx.save(); ctx.translate(PG.w*k, 0); ctx.rotate(Math.PI/2);
+    over = drawCard(ctx, k, page.items[0], { x:14, y:12, w:WIDE.w, h:WIDE.h }, st);
+    text(ctx, k, "↻ 종이를 옆으로 돌려서 놓아요", 14 + WIDE.w, 16, 3, "#A3ADA8", 400, "right");
+    ctx.restore();
+  } else {
+    ctx.save(); ctx.setLineDash([2*k,1.6*k]); ctx.strokeStyle = "#D3D9D6"; ctx.lineWidth = .3*k;
+    ctx.beginPath(); ctx.moveTo(6*k, 145*k); ctx.lineTo((PG.w-6)*k, 145*k); ctx.stroke(); ctx.restore();
+    text(ctx, k, "✂", 8, 145, 3.4, "#B5BDB9");
+    const areas = [{x:12,y:10,...HALF},{x:12,y:153,...HALF}];
+    page.items.forEach((it,i) => { if (drawCard(ctx, k, it, areas[i], st)) over = true; });
+  }
+  drawFooter(ctx, k);
+  return over;
+}
+
+/* 상태 */
+const $ = id => document.getElementById(id);
+const KEY = "magnet-hangul-words-v4";
+const places = Object.keys(WORDS);
+const catalog = places.flatMap(p => [...new Set(WORDS[p].split(/\s+/).filter(Boolean))].map(w => ({ word:w, place:p, batchim:hasBatchim(w) })));
+const same = (a, b) => a.word === b.word && a.place === b.place;
+let current = places[0];
+let picked = [];
+const DK = ["cons","vlen","hlen","gap","sp"];
+
+function load(){ try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){ return null; } }
+function persist(){
+  try { localStorage.setItem(KEY, JSON.stringify({ picked, dims:readDims(), color:val("color"), batchim:val("batchim"),
+    draw:$("draw").checked, outline:$("outline").checked })); } catch(e){}
+}
+function readDims(){ const d={}; DK.forEach(key => { const v = parseFloat($("d-"+key).value); d[key] = Number.isFinite(v) && v >= 0 ? v : CONFIG.dims[key]; }); return d; }
+function fillDims(d){ DK.forEach(key => $("d-"+key).value = d[key]); }
+function val(name){ return document.querySelector(`input[name=${name}]:checked`).value; }
+
+function colorWord(word){
+  return [...word].map(ch => { const s = split(ch); return `<span class="c">${s.cho}</span><span class="v">${s.jung}</span>${s.jong ? `<span class="c">${s.jong}</span>` : ""}`; }).join(" ");
+}
+function passFilter(c){ const f = val("batchim"); return f === "all" || (f === "yes") === c.batchim; }
+function renderTabs(){
+  const t = $("tabs"); t.innerHTML = "";
+  places.forEach(p => {
+    const n = catalog.filter(c => c.place === p && passFilter(c)).length;
+    const b = document.createElement("button"); b.type = "button"; b.setAttribute("role","tab");
+    b.innerHTML = `${p}<span>${n}</span>`;
+    b.setAttribute("aria-selected", p === current); b.onclick = () => { current = p; renderTabs(); renderShelf(); };
+    t.appendChild(b);
+  });
+}
+function visible(){
+  return catalog.filter(c => c.place === current && passFilter(c));
+}
+function wordButton(c){
+  const b = document.createElement("button"); b.type = "button"; b.className = "word";
+  b.setAttribute("aria-pressed", picked.some(p => same(p, c)));
+  b.setAttribute("aria-label", `${c.word}, ${c.batchim ? "받침 있음" : "받침 없음"}`);
+  b.textContent = c.word;
+  b.onclick = () => toggle(c);
+  return b;
+}
+function renderShelf(){
+  const s = $("shelf"); s.innerHTML = "";
+  const list = visible();
+  const groups = [
+    { title:"받침 없는 낱말", hint:"처음엔 여기서", items:list.filter(c => !c.batchim) },
+    { title:"받침 있는 낱말", hint:"", items:list.filter(c => c.batchim) }
+  ].filter(g => g.items.length);
+  if (!groups.length){ s.innerHTML = '<p class="note">이 칸에는 해당하는 낱말이 없어요.</p>'; return; }
+  groups.forEach(g => {
+    const wrap = document.createElement("div"); wrap.className = "group";
+    wrap.innerHTML = `<div class="group-title">${g.title} ${g.items.length}개 <small>${g.hint}</small></div>`;
+    const grid = document.createElement("div"); grid.className = "grid";
+    g.items.forEach(c => grid.appendChild(wordButton(c)));
+    wrap.appendChild(grid); s.appendChild(wrap);
+  });
+}
+function toggle(c){
+  const i = picked.findIndex(p => same(p, c));
+  if (i >= 0) picked.splice(i,1); else picked.push({ word:c.word, place:c.place, batchim:c.batchim });
+  update();
+}
+function renderPicked(){
+  const box = $("picked"); box.innerHTML = "";
+  $("pickCount").textContent = `${picked.length}개 고름`;
+  if (!picked.length){ box.innerHTML = '<span class="note">위 상자에서 낱말을 눌러 담아 주세요.</span>'; return; }
+  picked.forEach((p,i) => {
+    const el = document.createElement("span"); el.className = "pill" + (p.batchim ? " has" : ""); el.textContent = p.word;
+    const x = document.createElement("button"); x.type = "button"; x.setAttribute("aria-label", `${p.word} 빼기`); x.textContent = "×";
+    x.onclick = () => { picked.splice(i,1); update(); };
+    el.appendChild(x); box.appendChild(el);
+  });
+}
+
+function build(){
+  const d = readDims(), opt = { splitDouble:false };  // 세트에 ㄲ·ㄸ·ㅃ·ㅆ·ㅉ 조각이 따로 있어요
+  const items = picked.map(p => ({ ...p, batchim:hasBatchim(p.word), layout:layoutWord(p.word, d, opt) }));
+  const pages = []; let pair = [];
+  items.forEach(it => {
+    if (it.layout.w > HALF.w || it.layout.h > HALF.h - 12) pages.push({ wide:true, items:[it] });
+    else { pair.push(it); if (pair.length === 2){ pages.push({ items:pair }); pair = []; } }
+  });
+  if (pair.length) pages.push({ items:pair });
+  return { pages, st:{ colors:COLORS[val("color")] || COLORS.cr, outline:$("outline").checked, draw:$("draw").checked } };
+}
+
+let last = null;
+function renderSheets(){
+  last = build();
+  const box = $("pages"); box.innerHTML = "";
+  const wideN = last.pages.filter(p => p.wide).length;
+  $("pageInfo").textContent = `A4 세로 · ${last.pages.length}장${wideN ? ` (긴 낱말 ${wideN}장은 가로로 돌려 써요)` : ""}`;
+  if (!last.pages.length){ box.innerHTML = '<p class="note">낱말을 고르면 활동지가 여기에 나와요.</p>'; }
+  const warn = [];
+  last.pages.forEach((page, i) => {
+    const cv = document.createElement("canvas"); cv.className = "sheet";
+    cv.setAttribute("role","img"); cv.setAttribute("aria-label", `${i+1}장: ${page.items.map(p=>p.word).join(", ")}`);
+    box.appendChild(cv);
+    const k = (box.clientWidth || 600) / PG.w * (window.devicePixelRatio || 1);
+    if (drawPage(cv, k, page, last.st)) warn.push(page.items.map(p => p.word).join(", "));
+  });
+  $("msg").classList.remove("ok");
+  $("msg").textContent = warn.length ? `${warn.join(", ")}은(는) 자석 크기로는 A4 한 장에도 다 안 들어가요. 더 짧은 낱말로 바꿔 주세요.` : "";
+  renderCounts();
+}
+function renderCounts(){
+  const max = new Map();
+  last.pages.forEach(page => {
+    const m = new Map();
+    page.items.forEach(it => it.layout.items.forEach(p => m.set(p.ch, { n:(m.get(p.ch)?.n||0)+1, kind:p.kind })));
+    m.forEach((o,ch) => { if (!max.has(ch) || max.get(ch).n < o.n) max.set(ch, o); });
+  });
+  const order = [...CHO, ...JUNG], box = $("counts"); box.innerHTML = "";
+  if (!max.size){ box.innerHTML = '<span class="note">낱말을 고르면 보여요.</span>'; return; }
+  [...max.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).forEach(([ch,o]) => {
+    const s = document.createElement("span"); s.className = "chip";
+    s.innerHTML = `<b class="${o.kind}">${ch}</b>${o.n}개`; box.appendChild(s);
+  });
+}
+function update(){ renderShelf(); renderPicked(); renderSheets(); persist(); }
+
+/* 직접 넣기 */
+function addCustom(){
+  const m = $("addMsg"); m.classList.remove("ok");
+  const w = $("custom").value.replace(/\s+/g,"").normalize("NFC");
+  const err = checkWord(w);
+  if (err){ m.textContent = err; return; }
+  if (picked.some(p => p.word === w)){ m.textContent = `‘${josa(w,"’은","’는")} 이미 담겨 있어요.`; return; }
+  const L = layoutWord(w, readDims(), { splitDouble:false });
+  if (L.w > WIDE.w){ m.textContent = `‘${josa(w,"’은","’는")} 지금 자석 크기로는 A4 종이에서 잘려요. 더 짧은 낱말을 넣어 주세요.`; return; }
+  const b = hasBatchim(w);
+  picked.push({ word:w, place:"우리 집 낱말", batchim:b }); $("custom").value = "";
+  m.textContent = `‘${josa(w,"’을","’를")} 담았어요. ${b ? "받침 있는" : "받침 없는"} 낱말이에요.`; m.classList.add("ok");
+  update();
+}
+$("btn-add").addEventListener("click", addCustom);
+$("custom").addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229){ e.preventDefault(); addCustom(); } });
+$("btn-all").onclick = () => { visible().filter(c => !picked.some(p => same(p, c))).forEach(c => picked.push({ word:c.word, place:c.place, batchim:c.batchim })); update(); };
+document.querySelectorAll("input[name=batchim]").forEach(r => r.addEventListener("change", () => { renderTabs(); renderShelf(); persist(); }));
+$("btn-none").onclick = () => { picked = []; update(); };
+$("btn-reset").onclick = () => { fillDims(CONFIG.dims); renderSheets(); persist(); };
+
+/* 저장 */
+function hiRes(){ const s = build(); const k = 300/25.4; return s.pages.map(page => { const cv = document.createElement("canvas"); drawPage(cv, k, page, s.st); return cv; }); }
+function busy(on){ ["btn-pdf","btn-print","btn-png"].forEach(id => $(id).disabled = on); }
+function fname(){ return `자석한글-낱말-${picked.slice(0,2).map(p=>p.word).join("-") || "활동지"}`; }
+function dl(url, n){ const a = document.createElement("a"); a.href = url; a.download = n; document.body.appendChild(a); a.click(); a.remove(); }
+function needPick(){ if (!picked.length){ $("msg").textContent = "먼저 낱말을 골라 주세요."; return true; } return false; }
+
+// 외부 도구 없이 A4 PDF 만들기: 각 장을 JPEG 그림 한 장으로 넣어요
+function makePdf(canvases){
+  const enc = new TextEncoder(), parts = [], offsets = [];
+  let len = 0;
+  const push = x => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const obj = (n, body) => { offsets[n] = len; push(`${n} 0 obj\n`); body(); push("\nendobj\n"); };
+  const W = 595.28, H = 841.89, n = canvases.length;
+  // 번호: 1 카탈로그, 2 페이지 목록, 그다음 장마다 (페이지, 내용, 그림)
+  const pageIds = canvases.map((_, i) => 3 + i*3);
+  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  obj(1, () => push("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2, () => push(`<< /Type /Pages /Kids [${pageIds.map(id => id + " 0 R").join(" ")}] /Count ${n} >>`));
+  canvases.forEach((cv, i) => {
+    const pid = pageIds[i], cid = pid + 1, iid = pid + 2;
+    const bin = atob(cv.toDataURL("image/jpeg", 0.92).split(",")[1]);
+    const jpg = new Uint8Array(bin.length); for (let j = 0; j < bin.length; j++) jpg[j] = bin.charCodeAt(j);
+    const content = `q ${W} 0 0 ${H} 0 0 cm /Im${i} Do Q`;
+    obj(pid, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im${i} ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    obj(cid, () => { push(`<< /Length ${content.length} >>\nstream\n`); push(content); push("\nendstream"); });
+    obj(iid, () => { push(`<< /Type /XObject /Subtype /Image /Width ${cv.width} /Height ${cv.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`); push(jpg); push("\nendstream"); });
+  });
+  const total = 3 + n*3, xref = len;
+  let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let k = 1; k < total; k++) x += String(offsets[k]).padStart(10, "0") + " 00000 n \n";
+  push(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, { type:"application/pdf" });
+}
+let lastPdfUrl = null;
+$("btn-pdf").onclick = () => {
+  if (needPick()) return;
+  busy(true);
+  try {
+    const blob = makePdf(hiRes());
+    if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
+    lastPdfUrl = URL.createObjectURL(blob);
+    dl(lastPdfUrl, fname() + ".pdf");   // 누른 그 순간에 바로 저장
+    const m = $("msg"); m.classList.add("ok"); m.textContent = "";
+    const a = document.createElement("a"); a.href = lastPdfUrl; a.download = fname() + ".pdf"; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = "저장이 안 되면 여기를 눌러 PDF 열기";
+    m.append("PDF를 만들었어요. ", a);
+  } catch (e) {
+    $("msg").classList.remove("ok");
+    $("msg").textContent = "PDF를 만들지 못했어요. ‘인쇄’에서 PDF로 저장해 주세요.";
+  }
+  busy(false);
+};
+$("btn-png").onclick = async () => {
+  if (needPick()) return;
+  const cvs = hiRes();
+  if (cvs.length > 3) $("msg").textContent = "이미지는 앞 3장만 저장했어요. 여러 장은 PDF로 받는 게 편해요.";
+  busy(true);
+  for (let i=0;i<Math.min(3,cvs.length);i++){
+    const blob = await new Promise(r => cvs[i].toBlob(r, "image/png"));
+    const u = URL.createObjectURL(blob); dl(u, `${fname()}-${i+1}.png`); setTimeout(()=>URL.revokeObjectURL(u), 4000);
+  }
+  busy(false);
+};
+$("btn-print").onclick = async () => {
+  if (needPick()) return;
+  busy(true);
+  if (!$("page-style")){ const ps = document.createElement("style"); ps.id = "page-style"; ps.textContent = "@page{size:A4 portrait;margin:0}"; document.head.appendChild(ps); }
+  const root = $("print-root"); root.innerHTML = "";
+  await Promise.all(hiRes().map(cv => new Promise(res => { const img = new Image(); img.onload = img.onerror = res; img.src = cv.toDataURL("image/png"); root.appendChild(img); })));
+  busy(false); window.print();
+};
+
+/* 시작 */
+$("productLink").href = CONFIG.productUrl;
+const saved = load();
+fillDims(saved?.dims ? { ...CONFIG.dims, ...saved.dims } : CONFIG.dims);
+const pick = (name, v) => { const el = document.querySelector(`input[name=${name}][value="${v}"]`); if (el) el.checked = true; };
+if (saved){
+  pick("color", saved.color);
+  if (saved.batchim) pick("batchim", saved.batchim);
+  ["draw","outline"].forEach(id => { if (typeof saved[id] === "boolean") $(id).checked = saved[id]; });
+}
+picked = Array.isArray(saved?.picked)
+  ? saved.picked.filter(p => p && !checkWord(p.word)).map(p => ({ ...p, batchim:hasBatchim(p.word) }))
+  : catalog.filter(c => DEFAULT_PICK.includes(c.word)).map(c => ({ word:c.word, place:c.place, batchim:c.batchim }));
+renderTabs(); update();
+
+const ALL = CHO.join("") + JUNG.join("") + "바나나딸기";
+let t = null; const later = () => { clearTimeout(t); t = setTimeout(() => { renderSheets(); persist(); }, 120); };
+document.querySelector(".side").addEventListener("input", later);
+window.addEventListener("resize", later);
+Promise.all([document.fonts.load(`${GF.weight} 40px ${GF.css}`, ALL), document.fonts.load(`600 20px "IBM Plex Sans KR"`, "먹을거리")])
+  .catch(()=>{}).then(() => { mcache.clear(); update(); });
+</script>
