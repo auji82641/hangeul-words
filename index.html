@@ -281,20 +281,17 @@ function checkWord(w){
 
 /* 음절 하나 → 자석 조각 (mm) */
 function consList(c, opt){ return (opt.splitDouble && DOUBLE[c]) ? [...DOUBLE[c]] : [c]; }
-// 조각 하나의 실제 크기(mm). 글꼴과 상관없이 자석 크기표로 정해요.
-// 자로 잰 것: ㅇ 27×27 · ㅈ 36×27 · ㅣ 길이 52 · ㅏ 22×52 · ㅡ 55×10 · ㅗ 55×15
-// 나머지는 같은 비율로 어림한 값이에요 (가로÷세로). 트레이 43×31cm, 7×5칸 → 한 칸 약 58mm라 어떤 조각도 55mm를 넘지 않아요.
-const CONS_RATIO = { "ㄱ":1.0,"ㄴ":1.0,"ㄷ":1.05,"ㄹ":1.05,"ㅁ":1.0,"ㅂ":1.0,"ㅅ":1.25,"ㅇ":1.0,"ㅈ":1.33,"ㅊ":1.33,"ㅋ":1.0,"ㅌ":1.05,"ㅍ":1.15,"ㅎ":1.1,
-  "ㄲ":1.45,"ㄸ":1.45,"ㅃ":1.45,"ㅆ":1.5,"ㅉ":1.55 };   // 쌍자음도 한 조각 (약 39~42mm)
-const CONS_TALL = { "ㅊ":1.2, "ㅎ":1.2 };                       // 위에 점이 있어 조금 더 높아요
-const VERT_RATIO = { "ㅣ":0.2,"ㅏ":0.42,"ㅓ":0.42,"ㅑ":0.45,"ㅕ":0.45,"ㅐ":0.6,"ㅔ":0.6,"ㅒ":0.65,"ㅖ":0.65 };   // 가로÷길이
-const HORI_RATIO = { "ㅡ":0.18,"ㅗ":0.28,"ㅜ":0.28,"ㅛ":0.3,"ㅠ":0.3 };                                      // 세로÷길이
+// 조각 크기(mm): 모든 글자를 같은 글씨 크기로 그려 획 굵기가 같아요.
+// 글씨 크기는 ㅇ 높이(자로 잰 27mm)에 맞추고, 모음은 기둥만 늘려 ㅣ·ㅏ 52mm, ㅡ·ㅗ 55mm로 맞춰요.
+// 트레이 한 칸이 약 58mm라 어떤 조각도 55mm를 넘지 않아요.
+function baseScale(d){ const g = glyph("ㅇ"); return g ? d.cons / g.th : 0.1; }
 function piece(ch, kind, d){
-  let w, h;
-  if (VERT.has(ch)){ h = d.vlen; w = d.vlen * (VERT_RATIO[ch] || 0.42); }
-  else if (HORI.has(ch)){ w = d.hlen; h = d.hlen * (HORI_RATIO[ch] || 0.28); }
-  else { h = d.cons * (CONS_TALL[ch] || 1); w = d.cons * (CONS_RATIO[ch] || 1.05); }
-  return { ch, kind, w, h, T:d.cons*0.22, x:0, y:0 };   // 획 굵기 약 6mm: ㄹ·ㅂ처럼 획이 많은 글자도 또렷하게
+  const g = glyph(ch), S = baseScale(d);
+  if (!g) return { ch, kind, w:d.cons, h:d.cons, S, x:0, y:0 };
+  let w = g.tw*S, h = g.th*S, axis = null, extra = 0, k = S;
+  if (VERT.has(ch)){ axis = "y"; if (h < d.vlen && g.runs.length) extra = d.vlen - h; else if (h > d.vlen){ k = d.vlen/g.th; w = g.tw*k; } h = d.vlen; }
+  else if (HORI.has(ch)){ axis = "x"; if (w < d.hlen && g.runs.length) extra = d.hlen - w; else if (w > d.hlen){ k = d.hlen/g.tw; h = g.th*k; } w = d.hlen; }
+  return { ch, kind, w, h, S:k, axis, extra, x:0, y:0 };
 }
 function rowOf(list, d){
   let x = 0, h = 0;
@@ -360,46 +357,45 @@ function measure(_ctx, ch){
 function rr(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
-// 자석처럼 굵기가 일정한 선으로 글자를 직접 그려요 (글꼴과 상관없이 늘 같은 모양)
-// 좌표는 칸 안쪽(획 굵기만큼 뺀 곳)을 0~1로 본 값이에요. c = 동그라미 [가운데x, 가운데y, 반지름(세로 기준)]
-const SHAPES = {
-  "ㄱ":[[[0,0],[1,0],[1,1]]],
-  "ㄴ":[[[0,0],[0,1],[1,1]]],
-  "ㄷ":[[[1,0],[0,0],[0,1],[1,1]]],
-  "ㄹ":[[[0,0],[1,0],[1,.5],[0,.5],[0,1],[1,1]]],
-  "ㅁ":[[[0,0],[1,0],[1,1],[0,1],[0,0]]],
-  "ㅂ":[[[0,0],[0,1],[1,1],[1,0]],[[0,.45],[1,.45]]],
-  "ㅅ":[[[.5,0],[0,1]],[[.46,.22],[1,1]]],
-  "ㅇ":[{c:[.5,.5,.5]}],
-  "ㅈ":[[[0,0],[1,0]],[[.58,0],[0,1]],[[.42,.42],[1,1]]],
-  "ㅊ":[[[.5,0],[.5,.12]],[[0,.3],[1,.3]],[[.58,.3],[0,1]],[[.42,.62],[1,1]]],
-  "ㅋ":[[[0,0],[1,0],[1,1]],[[0,.5],[1,.5]]],
-  "ㅌ":[[[1,0],[0,0],[0,1],[1,1]],[[0,.5],[1,.5]]],
-  "ㅍ":[[[0,0],[1,0]],[[.3,0],[.3,1]],[[.7,0],[.7,1]],[[0,1],[1,1]]],
-  "ㅎ":[[[.5,0],[.5,.08]],[[.1,.24],[.9,.24]],{c:[.5,.7,.3]}],
-  "ㅣ":[[[.5,0],[.5,1]]],
-  "ㅏ":[[[0,0],[0,1]],[[0,.5],[1,.5]]],
-  "ㅑ":[[[0,0],[0,1]],[[0,.36],[1,.36]],[[0,.64],[1,.64]]],
-  "ㅓ":[[[1,0],[1,1]],[[0,.5],[1,.5]]],
-  "ㅕ":[[[1,0],[1,1]],[[0,.36],[1,.36]],[[0,.64],[1,.64]]],
-  "ㅐ":[[[0,0],[0,1]],[[0,.5],[.55,.5]],[[1,0],[1,1]]],
-  "ㅒ":[[[0,0],[0,1]],[[0,.38],[.55,.38]],[[0,.62],[.55,.62]],[[1,0],[1,1]]],
-  "ㅔ":[[[.45,0],[.45,1]],[[0,.5],[.45,.5]],[[1,0],[1,1]]],
-  "ㅖ":[[[.45,0],[.45,1]],[[0,.38],[.45,.38]],[[0,.62],[.45,.62]],[[1,0],[1,1]]],
-  "ㅡ":[[[0,.5],[1,.5]]],
-  "ㅗ":[[[.5,0],[.5,1]],[[0,1],[1,1]]],
-  "ㅛ":[[[.36,0],[.36,1]],[[.64,0],[.64,1]],[[0,1],[1,1]]],
-  "ㅜ":[[[0,0],[1,0]],[[.5,0],[.5,1]]],
-  "ㅠ":[[[0,0],[1,0]],[[.36,0],[.36,1]],[[.64,0],[.64,1]]]
-};
-const DOUBLE_OF = {"ㄲ":"ㄱ","ㄸ":"ㄷ","ㅃ":"ㅂ","ㅆ":"ㅅ","ㅉ":"ㅈ"};
-function strokeShape(ctx, shape, x0, y0, iw, ih){
-  shape.forEach(s => {
-    ctx.beginPath();
-    if (s.c){ const [cx, cy, r] = s.c, R = r*Math.min(iw, ih); ctx.ellipse(x0 + cx*iw, y0 + cy*ih, R, R, 0, 0, Math.PI*2); }
-    else s.forEach(([px, py], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x0 + px*iw, y0 + py*ih));
-    ctx.stroke();
-  });
+// 교과서체 글자를 한 번 크게 그려 두고(마스크), 모음은 기둥만 늘려서 붙여요
+const GLYPH_PX = 320, glyphCache = new Map(), tintCache = new Map();
+function glyph(ch){
+  if (glyphCache.has(ch)) return glyphCache.get(ch);
+  const font = `${GF.weight} ${GLYPH_PX}px ${GF.css}`;
+  MCTX.font = font; const m = MCTX.measureText(ch);
+  const pad = 16, W = Math.ceil(m.actualBoundingBoxLeft + m.actualBoundingBoxRight) + pad*2, H = Math.ceil(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) + pad*2;
+  if (!(W > pad*2 && H > pad*2)) return null;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const c = cv.getContext("2d", { willReadFrequently:true }); c.font = font; c.fillStyle = "#000"; c.textBaseline = "alphabetic";
+  c.fillText(ch, pad + m.actualBoundingBoxLeft, pad + m.actualBoundingBoxAscent);
+  const px = c.getImageData(0, 0, W, H).data, on = (x, y) => px[(y*W + x)*4 + 3] > 100;
+  let x0 = W, x1 = -1, y0 = H, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (on(x, y)){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const g = { cv, x0, y0, tw:x1 - x0 + 1, th:y1 - y0 + 1, runs:[] };
+  const axis = VERT.has(ch) ? "y" : HORI.has(ch) ? "x" : null;
+  if (axis){
+    // 기둥만 지나가는 줄(가지가 없는 줄)을 찾아요
+    const n = axis === "y" ? g.th : g.tw, cnt = new Array(n).fill(0);
+    for (let i = 0; i < n; i++){
+      const len = axis === "y" ? g.tw : g.th;
+      for (let j = 0; j < len; j++){ const x = axis === "y" ? x0 + j : x0 + i, y = axis === "y" ? y0 + i : y0 + j; if (on(x, y)) cnt[i]++; }
+    }
+    const lo = Math.floor(n*0.1), hi = Math.ceil(n*0.9);
+    let base = Infinity; for (let i = lo; i < hi; i++) if (cnt[i] > 0 && cnt[i] < base) base = cnt[i];
+    const ok = i => cnt[i] > 0 && cnt[i] <= base*1.15 + 2;
+    let i = lo; const runs = [];
+    while (i < hi){ if (ok(i)){ let j = i; while (j < hi && ok(j)) j++; if (j - i > n*0.04) runs.push([i + 2, j - 2]); i = j; } else i++; }
+    g.runs = runs.filter(r => r[1] > r[0]);
+  }
+  glyphCache.set(ch, g); return g;
+}
+function tinted(ch, color){
+  const key = ch + "|" + color; if (tintCache.has(key)) return tintCache.get(key);
+  const g = glyph(ch); if (!g) return null;
+  const cv = document.createElement("canvas"); cv.width = g.cv.width; cv.height = g.cv.height;
+  const c = cv.getContext("2d"); c.drawImage(g.cv, 0, 0); c.globalCompositeOperation = "source-in"; c.fillStyle = color; c.fillRect(0, 0, cv.width, cv.height);
+  tintCache.set(key, cv); return cv;
 }
 function drawPiece(ctx, k, p, ox, oy, st){
   const X = ox + p.x, Y = oy + p.y;
@@ -408,17 +404,28 @@ function drawPiece(ctx, k, p, ox, oy, st){
     ctx.save(); ctx.setLineDash([1.2*k,1*k]); ctx.lineWidth=.3*k; ctx.strokeStyle="#B9C2BE";
     rr(ctx, (X-o)*k, (Y-o)*k, (p.w+2*o)*k, (p.h+2*o)*k, 2*k); ctx.stroke(); ctx.restore();
   }
-  const T = Math.min(p.T, p.w, p.h);                 // 획 굵기(mm): 모든 글자가 같아요
-  ctx.save();
-  ctx.strokeStyle = p.kind === "c" ? st.colors.c : st.colors.v;
-  ctx.lineWidth = T*k; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  const ix = (X + T/2)*k, iy = (Y + T/2)*k, iw = Math.max(0, p.w - T)*k, ih = Math.max(0, p.h - T)*k;
-  if (DOUBLE_OF[p.ch]){
-    const one = SHAPES[DOUBLE_OF[p.ch]], gap = T*0.9*k, half = (iw - gap)/2;
-    strokeShape(ctx, one, ix, iy, half, ih);
-    strokeShape(ctx, one, ix + half + gap, iy, half, ih);
-  } else if (SHAPES[p.ch]) {
-    strokeShape(ctx, SHAPES[p.ch], ix, iy, iw, ih);
+  const g = glyph(p.ch), img = tinted(p.ch, p.kind === "c" ? st.colors.c : st.colors.v); if (!g || !img) return;
+  const S = p.S;
+  ctx.save(); ctx.imageSmoothingQuality = "high";
+  if (!p.axis || !p.extra){
+    // 칸 가운데에 같은 배율로
+    const dw = g.tw*S, dh = g.th*S;
+    ctx.drawImage(img, g.x0, g.y0, g.tw, g.th, (X + (p.w - dw)/2)*k, (Y + (p.h - dh)/2)*k, dw*k, dh*k);
+  } else {
+    // 기둥 부분만 늘려서 길이를 맞춰요
+    const vert = p.axis === "y", n = vert ? g.th : g.tw, total = g.runs.reduce((a, r) => a + (r[1] - r[0]), 0) || 1;
+    const cuts = []; let at = 0;
+    g.runs.forEach(r => { cuts.push([at, r[0], 0]); cuts.push([r[0], r[1], p.extra*(r[1] - r[0])/total]); at = r[1]; });
+    cuts.push([at, n, 0]);
+    const across = vert ? g.tw*S : g.th*S, off = vert ? (p.w - across)/2 : (p.h - across)/2;
+    let pos = 0;
+    cuts.forEach(([a, b, add]) => {
+      if (b <= a) return;
+      const len = (b - a)*S + add, ov = 0.35/k;   // 이음매가 안 보이게 살짝 겹쳐요
+      if (vert) ctx.drawImage(img, g.x0, g.y0 + a, g.tw, b - a, (X + off)*k, (Y + pos)*k, across*k, (len + ov)*k);
+      else      ctx.drawImage(img, g.x0 + a, g.y0, b - a, g.th, (X + pos)*k, (Y + off)*k, (len + ov)*k, across*k);
+      pos += len;
+    });
   }
   ctx.restore();
 }
@@ -714,7 +721,9 @@ let t = null; const later = () => { clearTimeout(t); t = setTimeout(() => { rend
 document.querySelector(".side").addEventListener("input", later);
 window.addEventListener("resize", later);
 Promise.all([document.fonts.load(`${GF.weight} 40px ${GF.css}`, ALL), document.fonts.load(`600 20px "IBM Plex Sans KR"`, "먹을거리")])
-  .catch(()=>{}).then(() => { mcache.clear(); update(); });
+  .catch(()=>{}).then(refreshGlyphs);
+function refreshGlyphs(){ mcache.clear(); glyphCache.clear(); tintCache.clear(); update(); }
+if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", refreshGlyphs);
 </script>
 </body>
 </html>
