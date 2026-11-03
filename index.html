@@ -99,6 +99,9 @@ button:disabled{opacity:.5;cursor:wait}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:14px;background:var(--bg)}
 .chip b{font-family:var(--font-glyph);font-weight:var(--glyph-weight);font-size:17px;margin-right:3px}
+.chip.short{border-color:var(--warn);color:var(--warn);font-weight:600}
+.counts-msg{font-size:12.5px;margin:0;color:var(--warn)}
+.counts-msg:empty{display:none}
 .dims{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
 .dims label{display:grid;gap:3px;font-size:12px;color:var(--muted)}
 .unit{position:relative}
@@ -177,8 +180,9 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 
       <section class="box">
         <h2>준비할 자석</h2>
-        <p class="note">활동지 한 장을 한꺼번에 놓을 때 가장 많이 필요한 개수예요.</p>
+        <p class="note">활동지 한 장을 한꺼번에 놓을 때 가장 많이 필요한 개수예요. 세트에는 글자마다 5개씩 들어 있어요.</p>
         <div class="chips" id="counts"></div>
+        <p class="counts-msg" id="countsMsg" aria-live="polite"></p>
         <details>
           <summary>자석 치수 맞추기</summary>
           <p class="note" style="margin-top:8px">자석 세 개만 자로 재면 돼요. 나머지 글자는 같은 비율로 맞춰져요. 이 기기에 저장돼요.</p>
@@ -231,6 +235,7 @@ const WORDS = {
   "놀이": "요가 가수 소리 레고 그네 시소",
   "밖에서": "카페 마트 우표 도로 지도 가게 나무 어린이집 유치원 가방"
 };
+const SET_COUNT = 5;   // 세트에 같은 글자가 들어 있는 개수
 const DEFAULT_PICK = ["바나나","포도","우유","딸기"];
 /* ========================== */
 
@@ -524,12 +529,15 @@ function renderCounts(){
     page.items.forEach(it => it.layout.items.forEach(p => m.set(p.ch, { n:(m.get(p.ch)?.n||0)+1, kind:p.kind })));
     m.forEach((o,ch) => { if (!max.has(ch) || max.get(ch).n < o.n) max.set(ch, o); });
   });
-  const order = [...CHO, ...JUNG], box = $("counts"); box.innerHTML = "";
+  const order = [...CHO, ...JUNG], box = $("counts"); box.innerHTML = ""; $("countsMsg").textContent = "";
   if (!max.size){ box.innerHTML = '<span class="note">낱말을 고르면 보여요.</span>'; return; }
+  const short = [];
   [...max.entries()].sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0])).forEach(([ch,o]) => {
-    const s = document.createElement("span"); s.className = "chip";
+    const s = document.createElement("span"); s.className = "chip" + (o.n > SET_COUNT ? " short" : "");
     s.innerHTML = `<b class="${o.kind}">${ch}</b>${o.n}개`; box.appendChild(s);
+    if (o.n > SET_COUNT) short.push(`${ch} ${o.n - SET_COUNT}개`);
   });
+  if (short.length) $("countsMsg").textContent = `한 장에 놓기엔 ${short.join(", ")}가 모자라요. 그 장은 한 낱말씩 번갈아 놓거나, 다른 낱말로 바꿔 주세요.`;
 }
 function update(){ renderShelf(); renderPicked(); renderSheets(); persist(); }
 
