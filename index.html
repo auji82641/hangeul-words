@@ -1,5 +1,16 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="다원몬테소리 원목 자석한글 크기 그대로, 받침 없는 낱말·받침 있는 낱말로 A4 활동지를 만들어요.">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
 <title>자석한글 낱말 상자</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600&family=Gowun+Batang:wght@400;700&display=swap">
@@ -122,7 +133,8 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
   :root{padding:0}
 }
 </style>
-
+</head>
+<body>
 <div class="wrap">
   <header>
     <div class="kicker">다원몬테소리 원목 자석한글과 함께</div>
@@ -273,7 +285,7 @@ function consList(c, opt){ return (opt.splitDouble && DOUBLE[c]) ? [...DOUBLE[c]
 // 자로 잰 것: ㅇ 27×27 · ㅈ 36×27 · ㅣ 길이 52 · ㅏ 22×52 · ㅡ 55×10 · ㅗ 55×15
 // 나머지는 같은 비율로 어림한 값이에요 (가로÷세로). 트레이 43×31cm, 7×5칸 → 한 칸 약 58mm라 어떤 조각도 55mm를 넘지 않아요.
 const CONS_RATIO = { "ㄱ":1.0,"ㄴ":1.0,"ㄷ":1.05,"ㄹ":1.05,"ㅁ":1.0,"ㅂ":1.0,"ㅅ":1.25,"ㅇ":1.0,"ㅈ":1.33,"ㅊ":1.33,"ㅋ":1.0,"ㅌ":1.05,"ㅍ":1.15,"ㅎ":1.1,
-  "ㄲ":1.33,"ㄸ":1.33,"ㅃ":1.33,"ㅆ":1.33,"ㅉ":1.33 };   // 쌍자음도 한 조각이라 ㅈ(36mm)만 한 너비예요
+  "ㄲ":1.45,"ㄸ":1.45,"ㅃ":1.45,"ㅆ":1.5,"ㅉ":1.55 };   // 쌍자음도 한 조각 (약 39~42mm)
 const CONS_TALL = { "ㅊ":1.2, "ㅎ":1.2 };                       // 위에 점이 있어 조금 더 높아요
 const VERT_RATIO = { "ㅣ":0.2,"ㅏ":0.42,"ㅓ":0.42,"ㅑ":0.45,"ㅕ":0.45,"ㅐ":0.6,"ㅔ":0.6,"ㅒ":0.65,"ㅖ":0.65 };   // 가로÷길이
 const HORI_RATIO = { "ㅡ":0.18,"ㅗ":0.28,"ㅜ":0.28,"ㅛ":0.3,"ㅠ":0.3 };                                      // 세로÷길이
@@ -282,7 +294,7 @@ function piece(ch, kind, d){
   if (VERT.has(ch)){ h = d.vlen; w = d.vlen * (VERT_RATIO[ch] || 0.42); }
   else if (HORI.has(ch)){ w = d.hlen; h = d.hlen * (HORI_RATIO[ch] || 0.28); }
   else { h = d.cons * (CONS_TALL[ch] || 1); w = d.cons * (CONS_RATIO[ch] || 1.05); }
-  return { ch, kind, w, h, x:0, y:0 };
+  return { ch, kind, w, h, T:d.cons*0.22, x:0, y:0 };   // 획 굵기 약 6mm: ㄹ·ㅂ처럼 획이 많은 글자도 또렷하게
 }
 function rowOf(list, d){
   let x = 0, h = 0;
@@ -348,6 +360,47 @@ function measure(_ctx, ch){
 function rr(ctx, x, y, w, h, r){
   ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
+// 자석처럼 굵기가 일정한 선으로 글자를 직접 그려요 (글꼴과 상관없이 늘 같은 모양)
+// 좌표는 칸 안쪽(획 굵기만큼 뺀 곳)을 0~1로 본 값이에요. c = 동그라미 [가운데x, 가운데y, 반지름(세로 기준)]
+const SHAPES = {
+  "ㄱ":[[[0,0],[1,0],[1,1]]],
+  "ㄴ":[[[0,0],[0,1],[1,1]]],
+  "ㄷ":[[[1,0],[0,0],[0,1],[1,1]]],
+  "ㄹ":[[[0,0],[1,0],[1,.5],[0,.5],[0,1],[1,1]]],
+  "ㅁ":[[[0,0],[1,0],[1,1],[0,1],[0,0]]],
+  "ㅂ":[[[0,0],[0,1],[1,1],[1,0]],[[0,.45],[1,.45]]],
+  "ㅅ":[[[.5,0],[0,1]],[[.46,.22],[1,1]]],
+  "ㅇ":[{c:[.5,.5,.5]}],
+  "ㅈ":[[[0,0],[1,0]],[[.58,0],[0,1]],[[.42,.42],[1,1]]],
+  "ㅊ":[[[.5,0],[.5,.12]],[[0,.3],[1,.3]],[[.58,.3],[0,1]],[[.42,.62],[1,1]]],
+  "ㅋ":[[[0,0],[1,0],[1,1]],[[0,.5],[1,.5]]],
+  "ㅌ":[[[1,0],[0,0],[0,1],[1,1]],[[0,.5],[1,.5]]],
+  "ㅍ":[[[0,0],[1,0]],[[.3,0],[.3,1]],[[.7,0],[.7,1]],[[0,1],[1,1]]],
+  "ㅎ":[[[.5,0],[.5,.08]],[[.1,.24],[.9,.24]],{c:[.5,.7,.3]}],
+  "ㅣ":[[[.5,0],[.5,1]]],
+  "ㅏ":[[[0,0],[0,1]],[[0,.5],[1,.5]]],
+  "ㅑ":[[[0,0],[0,1]],[[0,.36],[1,.36]],[[0,.64],[1,.64]]],
+  "ㅓ":[[[1,0],[1,1]],[[0,.5],[1,.5]]],
+  "ㅕ":[[[1,0],[1,1]],[[0,.36],[1,.36]],[[0,.64],[1,.64]]],
+  "ㅐ":[[[0,0],[0,1]],[[0,.5],[.55,.5]],[[1,0],[1,1]]],
+  "ㅒ":[[[0,0],[0,1]],[[0,.38],[.55,.38]],[[0,.62],[.55,.62]],[[1,0],[1,1]]],
+  "ㅔ":[[[.45,0],[.45,1]],[[0,.5],[.45,.5]],[[1,0],[1,1]]],
+  "ㅖ":[[[.45,0],[.45,1]],[[0,.38],[.45,.38]],[[0,.62],[.45,.62]],[[1,0],[1,1]]],
+  "ㅡ":[[[0,.5],[1,.5]]],
+  "ㅗ":[[[.5,0],[.5,1]],[[0,1],[1,1]]],
+  "ㅛ":[[[.36,0],[.36,1]],[[.64,0],[.64,1]],[[0,1],[1,1]]],
+  "ㅜ":[[[0,0],[1,0]],[[.5,0],[.5,1]]],
+  "ㅠ":[[[0,0],[1,0]],[[.36,0],[.36,1]],[[.64,0],[.64,1]]]
+};
+const DOUBLE_OF = {"ㄲ":"ㄱ","ㄸ":"ㄷ","ㅃ":"ㅂ","ㅆ":"ㅅ","ㅉ":"ㅈ"};
+function strokeShape(ctx, shape, x0, y0, iw, ih){
+  shape.forEach(s => {
+    ctx.beginPath();
+    if (s.c){ const [cx, cy, r] = s.c, R = r*Math.min(iw, ih); ctx.ellipse(x0 + cx*iw, y0 + cy*ih, R, R, 0, 0, Math.PI*2); }
+    else s.forEach(([px, py], i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x0 + px*iw, y0 + py*ih));
+    ctx.stroke();
+  });
+}
 function drawPiece(ctx, k, p, ox, oy, st){
   const X = ox + p.x, Y = oy + p.y;
   if (st.outline){
@@ -355,13 +408,19 @@ function drawPiece(ctx, k, p, ox, oy, st){
     ctx.save(); ctx.setLineDash([1.2*k,1*k]); ctx.lineWidth=.3*k; ctx.strokeStyle="#B9C2BE";
     rr(ctx, (X-o)*k, (Y-o)*k, (p.w+2*o)*k, (p.h+2*o)*k, 2*k); ctx.stroke(); ctx.restore();
   }
-  // 글자를 자석 크기 칸에 꽉 맞춰 그려요 (가로·세로 따로 늘려요)
-  const m = measure(null, p.ch), bw = m.l + m.r, bh = m.a + m.d; if (!bw || !bh) return;
-  const sx = p.w / bw, sy = p.h / bh;
-  ctx.save(); ctx.translate(X*k, Y*k); ctx.scale(sx*k, sy*k);
-  ctx.font = `${GF.weight} 100px ${GF.css}`; ctx.textBaseline = "alphabetic"; ctx.textAlign = "left";
-  ctx.fillStyle = p.kind === "c" ? st.colors.c : st.colors.v;
-  ctx.fillText(p.ch, m.l, m.a); ctx.restore();
+  const T = Math.min(p.T, p.w, p.h);                 // 획 굵기(mm): 모든 글자가 같아요
+  ctx.save();
+  ctx.strokeStyle = p.kind === "c" ? st.colors.c : st.colors.v;
+  ctx.lineWidth = T*k; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const ix = (X + T/2)*k, iy = (Y + T/2)*k, iw = Math.max(0, p.w - T)*k, ih = Math.max(0, p.h - T)*k;
+  if (DOUBLE_OF[p.ch]){
+    const one = SHAPES[DOUBLE_OF[p.ch]], gap = T*0.9*k, half = (iw - gap)/2;
+    strokeShape(ctx, one, ix, iy, half, ih);
+    strokeShape(ctx, one, ix + half + gap, iy, half, ih);
+  } else if (SHAPES[p.ch]) {
+    strokeShape(ctx, SHAPES[p.ch], ix, iy, iw, ih);
+  }
+  ctx.restore();
 }
 function text(ctx, k, str, x, y, size, color, weight, align){
   ctx.save(); ctx.font = `${weight||400} ${size*k}px ${UI_FONT}`; ctx.fillStyle = color; ctx.textBaseline = "middle"; ctx.textAlign = align || "left";
@@ -657,3 +716,5 @@ window.addEventListener("resize", later);
 Promise.all([document.fonts.load(`${GF.weight} 40px ${GF.css}`, ALL), document.fonts.load(`600 20px "IBM Plex Sans KR"`, "먹을거리")])
   .catch(()=>{}).then(() => { mcache.clear(); update(); });
 </script>
+</body>
+</html>
