@@ -671,6 +671,7 @@ $("btn-pdf").onclick = () => {
     if (lastPdfUrl) URL.revokeObjectURL(lastPdfUrl);
     lastPdfUrl = URL.createObjectURL(blob);
     dl(lastPdfUrl, fname() + ".pdf");   // 누른 그 순간에 바로 저장
+    track("pdf", outputInfo());
     const m = $("msg"); m.classList.add("ok"); m.textContent = "";
     const a = document.createElement("a"); a.href = lastPdfUrl; a.download = fname() + ".pdf"; a.target = "_blank"; a.rel = "noopener";
     a.textContent = "저장이 안 되면 여기를 눌러 PDF 열기";
@@ -690,6 +691,7 @@ $("btn-png").onclick = async () => {
     const blob = await new Promise(r => cvs[i].toBlob(r, "image/png"));
     const u = URL.createObjectURL(blob); dl(u, `${fname()}-${i+1}.png`); setTimeout(()=>URL.revokeObjectURL(u), 4000);
   }
+  track("png", outputInfo());
   busy(false);
 };
 $("btn-print").onclick = async () => {
@@ -698,8 +700,35 @@ $("btn-print").onclick = async () => {
   if (!$("page-style")){ const ps = document.createElement("style"); ps.id = "page-style"; ps.textContent = "@page{size:A4 portrait;margin:0}"; document.head.appendChild(ps); }
   const root = $("print-root"); root.innerHTML = "";
   await Promise.all(hiRes().map(cv => new Promise(res => { const img = new Image(); img.onload = img.onerror = res; img.src = cv.toDataURL("image/png"); root.appendChild(img); })));
-  busy(false); window.print();
+  busy(false); track("print", outputInfo()); window.print();
 };
+
+/* 운영통계: 횟수만 세요. 직접 넣은 낱말(아이 이름 등)은 보내지 않고 개수만 셉니다. */
+const TRACK = /\.vercel\.app$|dawonmontessori/.test(location.hostname);
+function track(e, extra){
+  if (!TRACK) return;
+  try {
+    const body = JSON.stringify({ e, m: matchMedia("(pointer: coarse)").matches ? 1 : 0, ...(extra || {}) });
+    const sent = navigator.sendBeacon && navigator.sendBeacon("/api/track", new Blob([body], { type:"application/json" }));
+    if (!sent) fetch("/api/track", { method:"POST", headers:{ "Content-Type":"application/json" }, body, keepalive:true }).catch(()=>{});
+  } catch (err) {}
+}
+function outputInfo(){
+  const fromBox = picked.filter(p => catalog.some(c => c.word === p.word && c.place === p.place));
+  return {
+    items: fromBox.map(p => ({ w:p.word, p:p.place, b:hasBatchim(p.word) ? 1 : 0 })),
+    custom: picked.length - fromBox.length,
+    pages: (last ? last.pages.length : 0),
+    gray: val("color") === "trace" ? 1 : 0
+  };
+}
+(function countVisit(){
+  const today = new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
+  let seen = null; try { seen = localStorage.getItem("hw-visit"); } catch (err) {}
+  if (seen === today) return;
+  try { localStorage.setItem("hw-visit", today); } catch (err) {}
+  track("visit");
+})();
 
 /* 시작 */
 $("productLink").href = CONFIG.productUrl;
