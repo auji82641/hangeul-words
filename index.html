@@ -233,7 +233,7 @@ const CONFIG = {
   productUrl: "https://smartstore.naver.com/montessori/products/5389011961",
   // 실제 자석을 재서 바꿔 주세요 (mm). 지금 값은 임시값이에요.
   // 자석 실측값 (mm): ㅇ 높이, ㅣ 길이, ㅡ 길이 (자로 잰 값: ㅇ 27 · ㅣ 52 · ㅡ 55 · ㅗ 가로 55 · ㅈ 36×27)
-  dims: { cons:27, vlen:52, hlen:55, gap:3, sp:8 },
+  dims: { cons:25.5, vlen:52, hlen:55, gap:3, sp:8 },   // ㅇ: 자로 잰 27mm에서 인쇄 확인 후 살짝 줄임
 };
 // 장소별 낱말. 받침 있고 없고는 자동으로 나눠져요. (배는 먹을거리·탈것 양쪽에 있어요)
 const WORDS = {
@@ -482,7 +482,7 @@ function drawPage(canvas, k, page, st){
 
 /* 상태 */
 const $ = id => document.getElementById(id);
-const KEY = "magnet-hangul-words-v4";
+const KEY = "magnet-hangul-words-v5";
 const places = Object.keys(WORDS);
 const catalog = places.flatMap(p => [...new Set(WORDS[p].split(/\s+/).filter(Boolean))].map(w => ({ word:w, place:p, batchim:hasBatchim(w) })));
 const same = (a, b) => a.word === b.word && a.place === b.place;
