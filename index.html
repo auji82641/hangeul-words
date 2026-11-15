@@ -126,6 +126,25 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 .shop a{text-decoration:none;background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:10px;padding:12px 18px;white-space:nowrap;border:1px solid var(--accent)}
 .shop a.alt{background:var(--surface);color:var(--accent)}
 
+/* 교구 링크 팝업 */
+@media screen{body{padding-bottom:76px}}
+.promo{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.promo-back{position:absolute;inset:0;background:rgba(10,14,12,.5)}
+.promo-card{position:relative;box-sizing:border-box;width:min(440px,100%);background:var(--surface);color:var(--ink);border-radius:20px 20px 0 0;
+  padding:26px max(20px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  display:grid;gap:8px;box-shadow:0 -10px 30px rgba(0,0,0,.18)}
+@media (min-width:640px){.promo{align-items:center}.promo-card{border-radius:20px;padding-bottom:16px}}
+.promo-x{position:absolute;right:6px;top:6px;width:44px;height:44px;border:0;background:none;font-size:26px;line-height:1;color:var(--muted);cursor:pointer}
+.promo-kicker{margin:0;font-size:13px;font-weight:600;color:var(--accent)}
+.promo-card h2{margin:0;font-size:21px}
+.promo-sub{margin:0;font-size:14px;color:var(--muted)}
+.promo-links{display:grid;gap:8px;margin-top:8px}
+.promo-links a{display:block;text-align:center;text-decoration:none;font-weight:700;font-size:16px;border-radius:12px;padding:14px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.promo-links a.alt{background:var(--surface);color:var(--accent)}
+.promo-today{justify-self:center;border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;cursor:pointer;padding:10px}
+.promo-fab{position:fixed;z-index:40;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  border:0;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:inherit;font-size:14px;font-weight:700;padding:12px 18px;box-shadow:0 6px 18px rgba(0,0,0,.22);cursor:pointer}
+
 #print-root{display:none}
 @media print{
   body *{visibility:hidden}
@@ -231,6 +250,22 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 </div>
 
 <div id="print-root"></div>
+
+<div class="promo" id="promo" hidden>
+  <div class="promo-back" data-close></div>
+  <div class="promo-card" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
+    <button class="promo-x" type="button" data-close aria-label="닫기">×</button>
+    <p class="promo-kicker">이 활동지는 이 자석 크기에 맞춰 만들었어요</p>
+    <h2 id="promoTitle">다원몬테소리 자석교구</h2>
+    <p class="promo-sub">원목 트레이 · 글자마다 5개씩 · 자음 빨강, 모음 파랑</p>
+    <div class="promo-links">
+      <a href="#" data-link="hangul" target="_blank" rel="noopener">🔗 한글 자석교구 보러 가기</a>
+      <a href="#" data-link="number" class="alt" target="_blank" rel="noopener">🔗 숫자 자석교구 보러 가기</a>
+    </div>
+    <button class="promo-today" type="button" id="promoToday">오늘 하루 보지 않기</button>
+  </div>
+</div>
+<button class="promo-fab" id="promoFab" type="button" hidden>🧲 교구 보러 가기</button>
 
 <script>
 /* ===== 판매자가 바꿀 곳 ===== */
@@ -741,6 +776,22 @@ function outputInfo(){
 /* 시작 */
 $("linkHangul").href = CONFIG.links.hangul;
 $("linkNumber").href = CONFIG.links.number;
+
+/* 교구 링크 팝업: 하루 한 번 자동으로 뜨고, 오른쪽 아래 버튼으로 언제든 다시 열기 */
+(function promo(){
+  const box = $("promo"), fab = $("promoFab");
+  const today = new Date(Date.now() + 9*3600e3).toISOString().slice(0,10);
+  box.querySelectorAll("[data-link]").forEach(a => { a.href = CONFIG.links[a.dataset.link]; });
+  const open = () => { box.hidden = false; fab.hidden = true; box.querySelector(".promo-links a").focus(); };
+  const close = () => { box.hidden = true; fab.hidden = false; };
+  box.addEventListener("click", e => { if (e.target.closest("[data-close]") || e.target.closest(".promo-links a")) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
+  $("promoToday").addEventListener("click", () => { try { localStorage.setItem("hw-promo", today); } catch (err) {} close(); });
+  fab.addEventListener("click", open);
+  let hidden = null; try { hidden = localStorage.getItem("hw-promo"); } catch (err) {}
+  fab.hidden = false;
+  if (hidden !== today) setTimeout(open, 1500);
+})();
 const saved = load();
 fillDims(saved?.dims ? { ...CONFIG.dims, ...saved.dims } : CONFIG.dims);
 const pick = (name, v) => { const el = document.querySelector(`input[name=${name}][value="${v}"]`); if (el) el.checked = true; };
