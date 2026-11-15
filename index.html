@@ -122,7 +122,9 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 
 .shop{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .shop p{margin:4px 0 0;color:var(--muted);font-size:14px;max-width:56ch}
-.shop a{text-decoration:none;background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:10px;padding:12px 18px;white-space:nowrap}
+.shop-links{display:flex;gap:8px;flex-wrap:wrap}
+.shop a{text-decoration:none;background:var(--accent);color:var(--accent-ink);font-weight:600;border-radius:10px;padding:12px 18px;white-space:nowrap;border:1px solid var(--accent)}
+.shop a.alt{background:var(--surface);color:var(--accent)}
 
 #print-root{display:none}
 @media print{
@@ -218,10 +220,13 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 
   <section class="box shop">
     <div>
-      <h2>다원몬테소리 원목 자석한글</h2>
-      <p>인천에서 직접 만드는 원목 이동글자예요. 자음과 모음을 하나씩 옮겨 활동지 위에서 낱말을 완성해 보세요.</p>
+      <h2>다원몬테소리 자석교구</h2>
+      <p>인천에서 직접 만드는 원목 이동글자예요. 자음과 모음을 하나씩 옮겨 활동지 위에서 낱말을 완성해 보세요. 한글 다음엔 숫자와 바둑알로 수 놀이도 이어 갈 수 있어요.</p>
     </div>
-    <a id="productLink" href="#" target="_blank" rel="noopener">자석한글 보러 가기</a>
+    <div class="shop-links">
+      <a id="linkHangul" href="#" target="_blank" rel="noopener">🔗 한글 자석교구</a>
+      <a id="linkNumber" class="alt" href="#" target="_blank" rel="noopener">🔗 숫자 자석교구</a>
+    </div>
   </section>
 </div>
 
@@ -230,7 +235,10 @@ details summary{cursor:pointer;font-weight:600;font-size:14px}
 <script>
 /* ===== 판매자가 바꿀 곳 ===== */
 const CONFIG = {
-  productUrl: "https://smartstore.naver.com/montessori/products/5389011961",
+  links: {
+    hangul: "https://mkt.shopping.naver.com/link/693a7a595ea0a206e5372759",   // 다원몬테소리 한글자석교구
+    number: "https://mkt.shopping.naver.com/link/682e6e89815d2663a46370fd",   // 다원몬테소리 숫자자석교구
+  },
   // 실제 자석을 재서 바꿔 주세요 (mm). 지금 값은 임시값이에요.
   // 자석 실측값 (mm): ㅇ 높이, ㅣ 길이, ㅡ 길이 (자로 잰 값: ㅇ 27 · ㅣ 52 · ㅡ 55 · ㅗ 가로 55 · ㅈ 36×27)
   dims: { cons:24.5, vlen:52, hlen:55, gap:3, sp:8 },   // ㅇ: 자로 잰 27mm → 인쇄해서 자석 올려 보며 두 번 줄임
@@ -731,7 +739,8 @@ function outputInfo(){
 })();
 
 /* 시작 */
-$("productLink").href = CONFIG.productUrl;
+$("linkHangul").href = CONFIG.links.hangul;
+$("linkNumber").href = CONFIG.links.number;
 const saved = load();
 fillDims(saved?.dims ? { ...CONFIG.dims, ...saved.dims } : CONFIG.dims);
 const pick = (name, v) => { const el = document.querySelector(`input[name=${name}][value="${v}"]`); if (el) el.checked = true; };
